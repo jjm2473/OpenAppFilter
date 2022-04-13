@@ -23,6 +23,7 @@
 #include "af_log.h"
 #include "af_client.h"
 #include "af_client_fs.h"
+#include "af_bypass.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("destan19@126.com");
@@ -840,6 +841,9 @@ static u_int32_t app_filter_hook(unsigned int hook,
 	}
 }
 #endif
+	if (BYPASS_PACKET())
+		return NF_ACCEPT;
+
 #if 0
 // 3.12.74-->3.13-rc1
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
