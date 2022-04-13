@@ -23,6 +23,7 @@
 #include "af_client.h"
 #include "af_client_fs.h"
 #include "cJSON.h"
+#include "af_bypass.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("destan19@126.com");
@@ -1076,6 +1077,8 @@ static u_int32_t app_filter_by_pass_hook(unsigned int hook,
 	if (!g_oaf_enable)
 		return NF_ACCEPT;
 	if (AF_MODE_GATEWAY == af_work_mode)
+		return NF_ACCEPT;
+	if (BYPASS_PACKET())
 		return NF_ACCEPT;
 	return app_filter_hook_bypass_handle(skb, skb->dev);
 }

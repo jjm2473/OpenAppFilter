@@ -24,6 +24,7 @@
 #include "af_utils.h"
 #include "app_filter.h"
 #include "cJSON.h"
+#include "af_bypass.h"
 
 DEFINE_RWLOCK(af_client_lock);
 
@@ -222,7 +223,6 @@ void flush_expired_visit_info(af_client_info_t *node)
 
 		if (cur_timep - node->visit_info[i].latest_time > timeout)
 		{
-			// 3?��o?��??3y????
 			memset(&node->visit_info[i], 0x0, sizeof(app_visit_info_t));
 			count++;
 		}
@@ -297,17 +297,6 @@ void af_visit_info_report(void)
 	}
 	AF_CLIENT_UNLOCK_W();
 }
-static inline int get_packet_dir(struct net_device *in)
-{
-	if (0 == strncmp(in->name, "br", 2))
-	{
-		return PKT_DIR_UP;
-	}
-	else
-	{
-		return PKT_DIR_DOWN;
-	}
-}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 static u_int32_t af_client_hook(void *priv,
@@ -325,35 +314,9 @@ static u_int32_t af_client_hook(unsigned int hook,
 	struct ethhdr *ethhdr = NULL;
 	unsigned char smac[ETH_ALEN];
 	af_client_info_t *nfc = NULL;
-	int pkt_dir = 0;
 	struct iphdr *iph = NULL;
 
-// 4.10-->4.11 nfct-->_nfct
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
-	struct nf_conn *ct = (struct nf_conn *)skb->_nfct;
-#else
-	struct nf_conn *ct = (struct nf_conn *)skb->nfct;
-#endif
-	if (ct == NULL)
-	{
-		return NF_ACCEPT;
-	}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
-	if (!skb->dev)
-		return NF_ACCEPT;
-
-	pkt_dir = get_packet_dir(skb->dev);
-#else
-	if (!in)
-	{
-		AF_ERROR("in is NULL\n");
-		return NF_ACCEPT;
-	}
-	pkt_dir = get_packet_dir(in);
-#endif
-
-	if (PKT_DIR_UP != pkt_dir)
+	if (BYPASS_PACKET())
 		return NF_ACCEPT;
 
 	ethhdr = eth_hdr(skb);
