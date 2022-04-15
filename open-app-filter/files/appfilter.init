@@ -12,12 +12,14 @@ service_triggers()
 	procd_add_reload_trigger "appfilter"
 }
 
-stop_service(){
+service_stopped(){
 	killall -9 oafd
 	rmmod oaf
 }
 
 start_service(){
+	[ "x`uci get appfilter.global.enable`" = "x1" ] || return 0
+
 	lang=`uci get luci.main.lang`
 	test -f $FEATURE_FILE && rm $FEATURE_FILE
 	test -f $CLASS_FILE && rm $CLASS_FILE
@@ -45,4 +47,8 @@ start_service(){
 	procd_set_param stderr 1
 	procd_set_param command "$OAFD_BIN"
 	procd_close_instance
+}
+
+service_started() {
+	[ "x`uci get appfilter.global.enable`" != "x1" ] && rmmod oaf
 }

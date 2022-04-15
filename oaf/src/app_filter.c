@@ -1121,8 +1121,8 @@ static void app_filter_fini(void)
 	af_log_exit();
 	af_client_exit();
 	finit_af_client_procfs();
-	  if (oaf_sock)
-        netlink_kernel_release(oaf_sock);
+	if (oaf_sock)
+		netlink_kernel_release(oaf_sock);
 	return ;
 }
 
