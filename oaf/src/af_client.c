@@ -316,6 +316,12 @@ static u_int32_t af_client_hook(unsigned int hook,
 	af_client_info_t *nfc = NULL;
 	struct iphdr *iph = NULL;
 
+	iph = ip_hdr(skb);
+	if (!iph)
+	{
+		return NF_ACCEPT;
+	}
+
 	if (BYPASS_PACKET())
 		return NF_ACCEPT;
 
@@ -327,12 +333,6 @@ static u_int32_t af_client_hook(unsigned int hook,
 	else
 	{
 		memcpy(smac, &skb->cb[40], ETH_ALEN);
-	}
-
-	iph = ip_hdr(skb);
-	if (!iph)
-	{
-		return NF_ACCEPT;
 	}
 
 	AF_CLIENT_LOCK_W();
