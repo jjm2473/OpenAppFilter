@@ -172,7 +172,10 @@ if config_users~=nil and config_users~=false then
 		users:value(r[i], r[i]);
 	end
 end
-m:section(SimpleSection).template = "admin_network/user_status"
+
+m:section(SimpleSection).template = "oaf/mac_vendor"
+
+m:section(SimpleSection).template = "oaf/user_status"
 local dir, fd
 dir = "/tmp/upload/"
 nixio.fs.mkdir(dir)
