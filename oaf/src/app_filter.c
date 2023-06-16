@@ -437,6 +437,39 @@ static void af_clean_feature_list(void)
 	feature_list_write_unlock();
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+// free
+static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned int len)
+{
+	struct skb_seq_state state;
+	unsigned char *msg_buf = NULL;
+	unsigned int consumed = 0;
+	if (len == 0)
+		return NULL;
+
+	msg_buf = kmalloc(len, GFP_KERNEL);
+	if (!msg_buf)
+		return NULL;
+
+	skb_prepare_seq_read(skb, from, from+len, &state);
+	while (1) {
+		unsigned int avail;
+		const u8 *ptr;
+		avail = skb_seq_read(consumed, &ptr, &state);
+		if (avail == 0) {
+			break;
+		}
+		memcpy(msg_buf + consumed, ptr, avail);
+		consumed += avail;
+		if (consumed >= len) {
+			skb_abort_seq_read(&state);
+			break;
+		}
+	}
+	return msg_buf;
+}
+#endif
+
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
 	struct tcphdr *tcph = NULL;
@@ -455,15 +488,23 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 	{
 	case IPPROTO_TCP:
 		tcph = (struct tcphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + tcph->doff * 4;
 		flow->l4_len = ntohs(iph->tot_len) - iph->ihl * 4 - tcph->doff * 4;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+		flow->l4_data = read_skb(skb, iph->ihl * 4 + tcph->doff * 4, flow->l4_len);
+#else
+		flow->l4_data = skb->data + iph->ihl * 4 + tcph->doff * 4;
+#endif
 		flow->dport = htons(tcph->dest);
 		flow->sport = htons(tcph->source);
 		return 0;
 	case IPPROTO_UDP:
 		udph = (struct udphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + 8;
 		flow->l4_len = ntohs(udph->len) - 8;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+		flow->l4_data = read_skb(skb, iph->ihl * 4 + 8, flow->l4_len);
+#else
+		flow->l4_data = skb->data + iph->ihl * 4 + 8;
+#endif
 		flow->dport = htons(udph->dest);
 		flow->sport = htons(udph->source);
 		return 0;
@@ -493,32 +534,30 @@ int dpi_https_proto(flow_info_t *flow)
 	{
 		return -1;
 	}
-	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
+	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01)) // TLS Handshake TLS 1.0
 		return -1;
 
 
-	for (i = 0; i < data_len; i++)
+	for (i = 0; i < data_len; ++i)
 	{
 		if (i + HTTPS_URL_OFFSET >= data_len)
 		{
 			return -1;
 		}
-		
 
-		if (p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0)
+		if (p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0) // server_name
 		{
 			// 2 bytes
-			memcpy(&url_len, p + i + HTTPS_LEN_OFFSET, 2);
-
-			if (ntohs(url_len) <= MIN_HOST_LEN || ntohs(url_len) > data_len || ntohs(url_len) > MAX_HOST_LEN)
+			url_len = ntohs(*((uint16_t *)(p + (i + HTTPS_LEN_OFFSET)))); // server name length
+			if (url_len <= MIN_HOST_LEN || url_len > data_len || url_len > MAX_HOST_LEN)
 			{
 				continue;
 			}
-			if (i + HTTPS_URL_OFFSET + ntohs(url_len) < data_len)
+			if (i + HTTPS_URL_OFFSET + url_len < data_len)
 			{
 				flow->https.match = AF_TRUE;
-				flow->https.url_pos = p + i + HTTPS_URL_OFFSET;
-				flow->https.url_len = ntohs(url_len);
+				flow->https.url_pos = p + (i + HTTPS_URL_OFFSET);
+				flow->https.url_len = url_len;
 				return 0;
 			}
 		}
@@ -641,8 +680,8 @@ static void dump_flow_info(flow_info_t *flow)
 	}
 	if (flow->l4_len > 0)
 	{
-		AF_LMT_INFO("src=" NIPQUAD_FMT ",dst=" NIPQUAD_FMT ",sport: %d, dport: %d, data_len: %d\n",
-					NIPQUAD(flow->src), NIPQUAD(flow->dst), flow->sport, flow->dport, flow->l4_len);
+		AF_LMT_INFO("src=" NIPQUAD_FMT ",dst=" NIPQUAD_FMT ",sport: %d, dport: %d, data_len: %d, http: %d, https: %d\n",
+					NIPQUAD(flow->src), NIPQUAD(flow->dst), flow->sport, flow->dport, flow->l4_len, flow->http.match, flow->https.match);
 	}
 
 	if (flow->l4_protocol == IPPROTO_TCP)
@@ -918,6 +957,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	flow_info_t flow;
 	u_int8_t smac[ETH_ALEN];
 	af_client_info_t *client = NULL;
+	u_int32_t ret = NF_ACCEPT;
 
 	if (!skb || !dev)
 		return NF_ACCEPT;
@@ -929,16 +969,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
-		return NF_ACCEPT;
-	
+		goto accept;
+
 	if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
-		return NF_ACCEPT;
+		goto accept;
 	}
 	if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
-		return NF_ACCEPT;
+		goto accept;
 
 	if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
-		return NF_ACCEPT;
+		goto accept;
 	}
 	af_get_smac(skb, smac);
 
@@ -946,13 +986,13 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	client = find_and_add_af_client(smac);
 	if (!client){
 		AF_CLIENT_UNLOCK_W();
-		return NF_ACCEPT;
+		goto accept;
 	}
 	client->update_jiffies = jiffies;
 	AF_CLIENT_UNLOCK_W();
 
 	if (0 != dpi_main(skb, &flow))
-		return NF_ACCEPT;
+		goto accept;
 
 	client->ip = flow.src;
 	app_filter_match(&flow);
@@ -961,9 +1001,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 	if (flow.drop)
 	{
-		return NF_DROP;
+		ret = NF_DROP;
 	}
-	return NF_ACCEPT;
+
+accept:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	if (flow.l4_data) {
+		kfree(flow.l4_data);
+	}
+#endif
+	return ret;
 }
 
 u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
@@ -973,22 +1020,23 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	struct nf_conn *ct = NULL;
 	struct nf_conn_acct *acct;
 	af_client_info_t *client = NULL;
+	u_int32_t ret = NF_ACCEPT;
 	int app_id = 0;
 	int drop = 0;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
-		return NF_ACCEPT;
+		goto accept;
 
 	ct = nf_ct_get(skb, &ctinfo);
 	if (ct == NULL || !nf_ct_is_confirmed(ct))
-		return NF_ACCEPT;
+		goto accept;
 
 	AF_CLIENT_LOCK_R();
 	client = find_af_client_by_ip(flow.src);
 	if (!client){
 		AF_CLIENT_UNLOCK_R();
-		return NF_ACCEPT;
+		goto accept;
 	}
 	client->update_jiffies = jiffies;
 	AF_CLIENT_UNLOCK_R();
@@ -1004,21 +1052,22 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			AF_CLIENT_UNLOCK_W();
 
 			if (drop){
-				return NF_DROP;
+				ret = NF_DROP;
+				goto accept;
 			}
 		}
 	}
 	acct = nf_conn_acct_find(ct);
 	if(!acct)
-		return NF_ACCEPT;
+		goto accept;
 	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
 		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
 
 	if(total_packets > MAX_DPI_PKT_NUM)
-		return NF_ACCEPT;
+		goto accept;
 
 	if (0 != dpi_main(skb, &flow))
-		return NF_ACCEPT;
+		goto accept;
 
 	app_filter_match(&flow);
 
@@ -1035,9 +1084,16 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	{
 		ct->mark |= NF_DROP_BIT;
 		AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
-		return NF_DROP;
+		ret = NF_DROP;
 	}
-	return NF_ACCEPT;
+
+accept:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	if (flow.l4_data) {
+		kfree(flow.l4_data);
+	}
+#endif
+	return ret;
 }
 
 
