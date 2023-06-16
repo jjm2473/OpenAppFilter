@@ -1058,6 +1058,8 @@ static u_int32_t app_filter_hook(unsigned int hook,
 		return NF_ACCEPT;
 	if (AF_MODE_BYPASS == af_work_mode)
 		return NF_ACCEPT;
+	if (BYPASS_PACKET())
+		return NF_ACCEPT;
 	return app_filter_hook_gateway_handle(skb, skb->dev);
 }
 
