@@ -88,4 +88,7 @@ if config_users ~= nil and config_users ~= false then
         users:value(r[i], r[i]);
     end
 end
+
+m:section(SimpleSection).template = "oaf/mac_vendor"
+
 return m
