@@ -1147,14 +1147,14 @@ static u_int32_t app_filter_by_pass_hook(unsigned int hook,
 static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 
 	},
 	{
 		.hook = app_filter_by_pass_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_PRE_ROUTING,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
@@ -1164,7 +1164,7 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
 		.owner = THIS_MODULE,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
