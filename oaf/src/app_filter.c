@@ -488,23 +488,15 @@ int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 	{
 	case IPPROTO_TCP:
 		tcph = (struct tcphdr *)(iph + 1);
-		flow->l4_len = ntohs(iph->tot_len) - iph->ihl * 4 - tcph->doff * 4;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-		flow->l4_data = read_skb(skb, iph->ihl * 4 + tcph->doff * 4, flow->l4_len);
-#else
 		flow->l4_data = skb->data + iph->ihl * 4 + tcph->doff * 4;
-#endif
+		flow->l4_len = ntohs(iph->tot_len) - iph->ihl * 4 - tcph->doff * 4;
 		flow->dport = htons(tcph->dest);
 		flow->sport = htons(tcph->source);
 		return 0;
 	case IPPROTO_UDP:
 		udph = (struct udphdr *)(iph + 1);
-		flow->l4_len = ntohs(udph->len) - 8;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-		flow->l4_data = read_skb(skb, iph->ihl * 4 + 8, flow->l4_len);
-#else
 		flow->l4_data = skb->data + iph->ihl * 4 + 8;
-#endif
+		flow->l4_len = ntohs(udph->len) - 8;
 		flow->dport = htons(udph->dest);
 		flow->sport = htons(udph->source);
 		return 0;
@@ -969,16 +961,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
-		goto accept;
+		return NF_ACCEPT;
 
 	if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
-		goto accept;
+		return NF_ACCEPT;
 	}
 	if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
-		goto accept;
+		return NF_ACCEPT;
 
 	if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
-		goto accept;
+		return NF_ACCEPT;
 	}
 	af_get_smac(skb, smac);
 
@@ -986,11 +978,16 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	client = find_and_add_af_client(smac);
 	if (!client){
 		AF_CLIENT_UNLOCK_W();
-		goto accept;
+		return NF_ACCEPT;
 	}
 	client->update_jiffies = jiffies;
 	AF_CLIENT_UNLOCK_W();
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+	if (!flow.l4_data)
+		return NF_ACCEPT;
+#endif
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
 
@@ -1026,17 +1023,17 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
-		goto accept;
+		return NF_ACCEPT;
 
 	ct = nf_ct_get(skb, &ctinfo);
 	if (ct == NULL || !nf_ct_is_confirmed(ct))
-		goto accept;
+		return NF_ACCEPT;
 
 	AF_CLIENT_LOCK_R();
 	client = find_af_client_by_ip(flow.src);
 	if (!client){
 		AF_CLIENT_UNLOCK_R();
-		goto accept;
+		return NF_ACCEPT;
 	}
 	client->update_jiffies = jiffies;
 	AF_CLIENT_UNLOCK_R();
@@ -1052,20 +1049,24 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			AF_CLIENT_UNLOCK_W();
 
 			if (drop){
-				ret = NF_DROP;
-				goto accept;
+				return NF_DROP;
 			}
 		}
 	}
 	acct = nf_conn_acct_find(ct);
 	if(!acct)
-		goto accept;
+		return NF_ACCEPT;
 	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
 		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
 
 	if(total_packets > MAX_DPI_PKT_NUM)
-		goto accept;
+		return NF_ACCEPT;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+	if (!flow.l4_data)
+		return NF_ACCEPT;
+#endif
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
 
