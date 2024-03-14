@@ -22,12 +22,6 @@ extern u32 nfc_debug_level;
 		((unsigned char *)&addr)[3]
 #define NIPQUAD_FMT "%u.%u.%u.%u"
 
-enum NFC_PKT_DIR
-{
-	PKT_DIR_DOWN,
-	PKT_DIR_UP
-};
-
 #define MAX_VISIT_HISTORY_TIME 24
 #define MAX_RECORD_APP_NUM 64
 

@@ -24,6 +24,7 @@
 #include "af_client.h"
 #include "af_client_fs.h"
 #include "cJSON.h"
+#include "af_bypass.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("destan19@126.com");
@@ -691,8 +692,8 @@ static void dump_flow_info(flow_info_t *flow)
 	}
 	if (flow->l4_len > 0)
 	{
-		AF_LMT_INFO("src=" NIPQUAD_FMT ",dst=" NIPQUAD_FMT ",sport: %d, dport: %d, data_len: %d\n",
-					NIPQUAD(flow->src), NIPQUAD(flow->dst), flow->sport, flow->dport, flow->l4_len);
+		AF_LMT_INFO("src=" NIPQUAD_FMT ",dst=" NIPQUAD_FMT ",sport: %d, dport: %d, data_len: %d, http: %d, https: %d\n",
+					NIPQUAD(flow->src), NIPQUAD(flow->dst), flow->sport, flow->dport, flow->l4_len, flow->http.match, flow->https.match);
 	}
 
 	if (flow->l4_protocol == IPPROTO_TCP)
@@ -982,12 +983,11 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 
 	if (0 == af_lan_ip || 0 == af_lan_mask)
 		return NF_ACCEPT;
-	if (strstr(dev->name, "docker"))
-		return NF_ACCEPT;
 
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
+
 	if (flow.src || flow.dst) {
 		if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
 			return NF_ACCEPT;
@@ -1116,6 +1116,8 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		return NF_ACCEPT;
 	}
 
+	if (skb->len < 67 || skb->len > 1200)
+		return NF_ACCEPT;
 	if (skb_is_nonlinear(skb)) {
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
@@ -1186,6 +1188,8 @@ static u_int32_t app_filter_by_pass_hook(unsigned int hook,
 	if (!g_oaf_enable)
 		return NF_ACCEPT;
 	if (AF_MODE_GATEWAY == af_work_mode)
+		return NF_ACCEPT;
+	if (BYPASS_PACKET())
 		return NF_ACCEPT;
 	return app_filter_hook_bypass_handle(skb, skb->dev);
 }
