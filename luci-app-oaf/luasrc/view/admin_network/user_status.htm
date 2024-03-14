@@ -2,6 +2,7 @@
 <% local dsp=require "luci.dispatcher" -%>
 
 <script type="text/javascript" src="<%=resource%>/echarts.min.js?v=5.0"></script>
+<script src="/luci-static/resources/mac_vendor/mac_vendor.js?v=<%=math.floor(os.time()/60)%>"></script>
 
 	<script type="text/javascript">//<![CDATA[
 		let visit_time_data = []; 
@@ -11,6 +12,9 @@
 			]
 		}
 		let cur_page = 0;
+		let mac_to_vendor_name = function() {
+			return "";
+		};
 
 		function getAllUsersData(page) {
 			new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 3, page: page},
@@ -24,6 +28,16 @@
 		window.onload = function() {
 			cur_page = 0; // default fetch all
 			getAllUsersData(cur_page);
+			window.mac_vendor && window.mac_vendor.onready(function(api) {
+				mac_to_vendor_name = function(mac) {
+					var vendor = api.query(mac);
+					if (vendor && vendor.vendor_cn) {
+						return ' ['+vendor.vendor_cn+']';
+					} else {
+						return "";
+					}
+				};
+			});
 
 			setInterval(function() {
 				getAllUsersData(cur_page);
@@ -60,7 +74,7 @@
 						<div style="display: flex; align-items: center;">
 							<div>
 								<div>${displayName}</div>
-								<div>${user_list[i].mac}</div>
+								<div>${user_list[i].mac}${mac_to_vendor_name(user_list[i].mac)}</div>
 							</div>
 						</div>
 					`;

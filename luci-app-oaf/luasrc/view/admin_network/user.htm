@@ -66,6 +66,8 @@
     
 </style>
 
+<script src="/luci-static/resources/mac_vendor/mac_vendor.js?v=<%=math.floor(os.time()/60)%>"></script>
+
 <script type="text/javascript">//<![CDATA[
     let userData = {
         users: [],
@@ -77,26 +79,56 @@
     };
             
     let allUsers = [];
+    let mac_to_vendor_name = function() {
+        return "";
+    };
     function initData() {
         userData.list = [];
-        getAppFilterUserData();
-        getAllUsersData();
-        getWhitelistData();
+        Promise.all([
+            new Promise(function(resolve){
+                getAppFilterUserData(resolve);
+            }),
+            new Promise(function(resolve){
+                getAllUsersData(resolve);
+            }),
+            new Promise(function(resolve){
+                getWhitelistData(resolve);
+            })
+        ]).then(function(){
+            window.mac_vendor && window.mac_vendor.onready(function(api) {
+                mac_to_vendor_name = function(mac) {
+                    var vendor = api.query(mac);
+                    if (vendor && vendor.vendor_cn) {
+                        return ' ['+vendor.vendor_cn+']';
+                    } else {
+                        return "";
+                    }
+                };
+                $([document.getElementById('auto_user_table'), document.getElementById('user_table')]).find('div.tr > div.td:first-child').each(function(i,e){
+                    var mac = e.innerText;
+                    var vendor = api.query(mac);
+                    if (vendor && vendor.vendor_cn) {
+                        e.innerText += (' ['+vendor.vendor_cn+']');
+                    }
+                });
+			});
+        });
     }
 
 
-    function getAllUsersData() {
+    function getAllUsersData(resolve) {
         new XHR().get('<%=url('admin/network/get_all_users')%>', {flag: 2, page: 0},
             function (x, data) {
  				if (Array.isArray(data.data.list))  
                 	allUsers = data.data.list;
                 renderAutoUserData();
+                resolve && resolve();
             }
         );
     }
 
 
-    function getAppFilterUserData() {
+    function getAppFilterUserData(resolve) {
         new XHR().get('<%=url('admin/network/get_app_filter_user')%>', null,
             function (x, data) {
 
@@ -105,6 +137,7 @@
                 	userData.list=[]   
                 renderUserData();
                 render_mode_description(userData.mode);
+                resolve && resolve();
             }
         );
     }
@@ -156,7 +189,7 @@
             const row = document.createElement('div');
             row.className = 'tr';
             row.innerHTML = `
-                <div class="td">${user.mac}</div>
+                <div class="td">${user.mac}${mac_to_vendor_name(user.mac)}</div>
                 <div class="td">${hostname}</div>
                 <div class="td">${nickname}</div>
                 ${userData.mode === 1 ? `<div class="td"><button type="button" class="delete-button" onclick="removeUser(${index})"><%:Delete%></button></div>` : ''}
@@ -190,7 +223,7 @@
                 const row = document.createElement('div');
                 row.className = 'tr';
                 row.innerHTML = `
-                    <div class="td">${user.mac}</div>
+                    <div class="td">${user.mac}${mac_to_vendor_name(user.mac)}</div>
                     <div class="td">${hostname}</div>
                     <div class="td">${nickname}</div>
                                     <div class="td">
@@ -262,7 +295,7 @@
             userElement.innerHTML = `
                 <label style="display: flex; align-items: center;">
                     <input type="checkbox" value="${user.mac}" style="margin-right: 8px;">
-                    <span>${user.mac}</span>
+                    <span>${user.mac}${mac_to_vendor_name(user.mac)}</span>
                     <span style="color: #666; margin-left: 8px;">${displayName ? `(${displayName})` : ''}</span>
                 </label>
             `;
@@ -319,7 +352,7 @@
         });
     }
 
-    function getWhitelistData() {
+    function getWhitelistData(resolve) {
         new XHR().get('<%=url('admin/network/get_whitelist_user')%>', null,
             function (x, data) {
                 if (data.data && Array.isArray(data.data.list)) {
@@ -328,6 +361,7 @@
                     whitelistData.users = [];
                 }
                 renderWhitelistData();
+				resolve && resolve();
             }
         );
     }
