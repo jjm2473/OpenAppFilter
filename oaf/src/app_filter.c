@@ -549,28 +549,26 @@ int dpi_https_proto(flow_info_t *flow)
 		return -1;
 
 
-	for (i = 0; i < data_len; i++)
+	for (i = 0; i < data_len; ++i)
 	{
 		if (i + HTTPS_URL_OFFSET >= data_len)
 		{
 			return -1;
 		}
-		
 
-		if (p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0)
+		if (p[i] == 0x0 && p[i + 1] == 0x0 && p[i + 2] == 0x0 && p[i + 3] != 0x0) // server_name
 		{
 			// 2 bytes
-			memcpy(&url_len, p + i + HTTPS_LEN_OFFSET, 2);
-
-			if (ntohs(url_len) <= MIN_HOST_LEN || ntohs(url_len) > data_len || ntohs(url_len) > MAX_HOST_LEN)
+			url_len = ntohs(*((uint16_t *)(p + (i + HTTPS_LEN_OFFSET)))); // server name length
+			if (url_len <= MIN_HOST_LEN || url_len > data_len || url_len > MAX_HOST_LEN)
 			{
 				continue;
 			}
-			if (i + HTTPS_URL_OFFSET + ntohs(url_len) < data_len)
+			if (i + HTTPS_URL_OFFSET + url_len < data_len)
 			{
 				flow->https.match = AF_TRUE;
-				flow->https.url_pos = p + i + HTTPS_URL_OFFSET;
-				flow->https.url_len = ntohs(url_len);
+				flow->https.url_pos = p + (i + HTTPS_URL_OFFSET);
+				flow->https.url_len = url_len;
 				return 0;
 			}
 		}
