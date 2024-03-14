@@ -1,6 +1,20 @@
 <% local dsp=require "luci.dispatcher" -%>
 	<script type="text/javascript">//<![CDATA[
-		XHR.poll(5, '<%=url('admin/network/dev_app_status')%>', null,
+		(function() {
+		var mac_vendor_api = false;
+		window.mac_vendor && window.mac_vendor.onready(function(api) {
+			$(document.getElementById('user_status_table')).find('tr.tr td a').each(function(i,e){
+				var mac = e.innerText;
+				var vendor = api.query(mac);
+				if (vendor && vendor.vendor_cn) {
+					var container = e.parentElement;
+					container.innerHTML="";
+					container.append(e, document.createTextNode(' ['+vendor.vendor_cn+']'));
+				}
+			});
+			mac_vendor_api = api;
+		});
+		XHR.poll(5, "<%=url('admin/network/dev_app_status')%>", null,
 			function (x, st) {
 				var tb = document.getElementById('user_status_table');
 				var dev_list_str = JSON.stringify(st);
@@ -20,7 +34,14 @@
 						tr.className = 'tr cbi-rowstyle-' + ((i % 2) + 1);
 						tr.insertCell(-1).innerHTML = i + 1;
 						tr.insertCell(-1).innerHTML = hostname;
-						tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/services/appfilter/user_list/')%>" + devlist[i].mac + "'>" + devlist[i].mac + "</a>";
+						var comment = "";
+						if (mac_vendor_api) {
+							var vendor = mac_vendor_api.query(devlist[i].mac);
+							if (vendor && vendor.vendor_cn) {
+								comment = ' ['+vendor.vendor_cn+']';
+							}
+						}
+						tr.insertCell(-1).innerHTML = "<a href='<%=url('admin/network/appfilter/user_list/')%>" + devlist[i].mac + "'>" + devlist[i].mac + "</a>" + comment;
 						tr.insertCell(-1).innerHTML = devlist[i].ip;
 						var app_list_str = "";
 						for (var j = 0; j < devlist[i].applist.length; j++) {
@@ -47,7 +68,7 @@
 				}
 			}
 		);
-
+		})();
 //]]></script>
 
 
