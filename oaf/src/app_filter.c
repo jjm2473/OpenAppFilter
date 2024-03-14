@@ -488,11 +488,11 @@ int dpi_https_proto(flow_info_t *flow)
 		AF_ERROR("flow is NULL\n");
 		return -1;
 	}
-	if (NULL == p || data_len == 0)
+	if (NULL == p || data_len <= 0xb0)
 	{
 		return -1;
 	}
-	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
+	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01 && p[5] == 0x01)) // TLS Handshake TLS 1.0 Client Hello
 		return -1;
 
 
@@ -823,6 +823,10 @@ EXIT:
 }
 
 #define NF_DROP_BIT 0x80000000
+#define NF_MARK_BIT 0x40000000
+#define NF_APP_BIT 0x3FFF0000
+#define NF_DROP_MARK (NF_DROP_BIT | NF_MARK_BIT)
+#define NF_MASK_BIT (NF_DROP_MARK | NF_APP_BIT)
 
 static int af_get_visit_index(af_client_info_t *node, int app_id)
 {
@@ -975,13 +979,21 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	int app_id = 0;
 	int drop = 0;
 
+	ct = nf_ct_get(skb, &ctinfo);
+
+	if (ct == NULL || !nf_ct_is_confirmed(ct))
+		return NF_ACCEPT;
+
+	if ((ct->mark & NF_MASK_BIT) == NF_MARK_BIT)
+		return NF_ACCEPT;
+
+	if (CTINFO2DIR(ctinfo) == IP_CT_DIR_REPLY)
+		return NF_ACCEPT;
+
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
 
-	ct = nf_ct_get(skb, &ctinfo);
-	if (ct == NULL || !nf_ct_is_confirmed(ct))
-		return NF_ACCEPT;
 
 	AF_CLIENT_LOCK_R();
 	client = find_af_client_by_ip(flow.src);
@@ -992,9 +1004,9 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	client->update_jiffies = jiffies;
 	AF_CLIENT_UNLOCK_R();
 
-	if (ct->mark != 0)
+	if ((ct->mark & NF_MARK_BIT) != 0)
 	{
-		app_id = ct->mark & (~NF_DROP_BIT);
+		app_id = (ct->mark & NF_APP_BIT) >> 16;
 		if (app_id > 1000 && app_id < 9999){
 			if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
 				drop = 1;
@@ -1006,6 +1018,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 				return NF_DROP;
 			}
 		}
+		return NF_ACCEPT;
 	}
 	acct = nf_conn_acct_find(ct);
 	if(!acct)
@@ -1013,8 +1026,10 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
 		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
 
-	if(total_packets > MAX_DPI_PKT_NUM)
+	if (total_packets > MAX_DPI_PKT_NUM) {
+		ct->mark |= NF_MARK_BIT;
 		return NF_ACCEPT;
+	}
 
 	if (0 != dpi_main(skb, &flow))
 		return NF_ACCEPT;
@@ -1023,19 +1038,20 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 
 	if (flow.app_id != 0)
 	{
-		ct->mark = flow.app_id;
+		ct->mark = (ct->mark & (~NF_APP_BIT)) | (flow.app_id << 16) | NF_MARK_BIT;
 		AF_CLIENT_LOCK_W();
 		af_update_client_app_info(client, flow.app_id, flow.drop);
 		AF_CLIENT_UNLOCK_W();
 		AF_LMT_INFO("match %s %pI4(%d)--> %pI4(%d) len = %d, %d\n ", IPPROTO_TCP == flow.l4_protocol ? "tcp" : "udp",
 					&flow.src, flow.sport, &flow.dst, flow.dport, skb->len, flow.app_id);
+		if (flow.drop)
+		{
+			ct->mark |= NF_DROP_BIT;
+			AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
+			return NF_DROP;
+		}
 	}
-	if (flow.drop)
-	{
-		ct->mark |= NF_DROP_BIT;
-		AF_LMT_INFO("##Drop app %s flow, appid is %d\n", flow.app_name, flow.app_id);
-		return NF_DROP;
-	}
+
 	return NF_ACCEPT;
 }
 
