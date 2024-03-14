@@ -1118,6 +1118,8 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		return NF_ACCEPT;
 	}
 
+	if (skb->len < 67 || skb->len > 1200)
+		return NF_ACCEPT;
 	if (skb_has_frag_list(skb)) {
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
@@ -1168,8 +1170,6 @@ static u_int32_t app_filter_hook(unsigned int hook,
 	if (!g_oaf_enable)
 		return NF_ACCEPT;
 	if (AF_MODE_BYPASS == af_work_mode)
-		return NF_ACCEPT;
-	if (BYPASS_PACKET())
 		return NF_ACCEPT;
 	return app_filter_hook_gateway_handle(skb, skb->dev);
 }
