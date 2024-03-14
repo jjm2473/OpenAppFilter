@@ -12,6 +12,7 @@
 #include <net/netfilter/nf_conntrack_acct.h>
 #include <linux/skbuff.h>
 #include <net/ip.h>
+#include <uapi/linux/ipv6.h>
 #include <linux/types.h>
 #include <net/sock.h>
 #include <linux/etherdevice.h>
@@ -472,33 +473,51 @@ static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned 
 
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
+	unsigned char *ipp;
+	int ipp_len;
 	struct tcphdr *tcph = NULL;
 	struct udphdr *udph = NULL;
 	struct nf_conn *ct = NULL;
 	struct iphdr *iph = NULL;
+	struct ipv6hdr *ip6h = NULL;
 	if (!skb)
 		return -1;
-	iph = ip_hdr(skb);
-	if (!iph)
+	switch (skb->protocol) {
+	case htons(ETH_P_IP):
+		iph = ip_hdr(skb);
+		flow->src = iph->saddr;
+		flow->dst = iph->daddr;
+		flow->l4_protocol = iph->protocol;
+		ipp = ((unsigned char *)iph) + iph->ihl * 4;
+		ipp_len = ((unsigned char *)iph) + ntohs(iph->tot_len) - ipp;
+		break;
+	case htons(ETH_P_IPV6):
+		ip6h = ipv6_hdr(skb);
+		flow->src6 = ip6h->saddr.s6_addr;
+		flow->dst6 = ip6h->daddr.s6_addr;
+		flow->l4_protocol = ip6h->nexthdr;
+		ipp = ((unsigned char *)ip6h) + sizeof(struct ipv6hdr);
+		ipp_len = ntohs(ip6h->payload_len);
+		break;
+	default:
 		return -1;
-	flow->src = iph->saddr;
-	flow->dst = iph->daddr;
-	flow->l4_protocol = iph->protocol;
-	switch (iph->protocol)
+	}
+
+	switch (flow->l4_protocol)
 	{
 	case IPPROTO_TCP:
-		tcph = (struct tcphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + tcph->doff * 4;
-		flow->l4_len = ntohs(iph->tot_len) - iph->ihl * 4 - tcph->doff * 4;
-		flow->dport = htons(tcph->dest);
-		flow->sport = htons(tcph->source);
+		tcph = (struct tcphdr *)ipp;
+		flow->l4_len = ipp_len - tcph->doff * 4;
+		flow->l4_data = ipp + tcph->doff * 4;
+		flow->dport = ntohs(tcph->dest);
+		flow->sport = ntohs(tcph->source);
 		return 0;
 	case IPPROTO_UDP:
-		udph = (struct udphdr *)(iph + 1);
-		flow->l4_data = skb->data + iph->ihl * 4 + 8;
+		udph = (struct udphdr *)ipp;
 		flow->l4_len = ntohs(udph->len) - 8;
-		flow->dport = htons(udph->dest);
-		flow->sport = htons(udph->source);
+		flow->l4_data = ipp + 8;
+		flow->dport = ntohs(udph->dest);
+		flow->sport = ntohs(udph->source);
 		return 0;
 	case IPPROTO_ICMP:
 		break;
@@ -971,14 +990,22 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	memset((char *)&flow, 0x0, sizeof(flow_info_t));
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
-	
-	if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
-		return NF_ACCEPT;
-	}
-	if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
-		return NF_ACCEPT;
+	if (flow.src || flow.dst) {
+		if (af_lan_ip == flow.src || af_lan_ip == flow.dst){
+			return NF_ACCEPT;
+		}
+		if (af_check_bcast_ip(&flow) || af_match_local_packet(&flow))
+			return NF_ACCEPT;
 
-	if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+		if ((flow.src & af_lan_mask) != (af_lan_ip & af_lan_mask)){
+			return NF_ACCEPT;
+		}
+	} else if (flow.src6 && flow.dst6) {
+		if (flow.src6[0] == 0xff || flow.dst6[0] == 0xff) {
+			return NF_ACCEPT;
+		}
+		return NF_DROP;
+	} else {
 		return NF_ACCEPT;
 	}
 	af_get_smac(skb, smac);
@@ -990,7 +1017,8 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		return NF_ACCEPT;
 	}
 	client->update_jiffies = jiffies;
-	client->ip = flow.src;
+	if (flow.src)
+		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
 
 	if (skb_is_nonlinear(skb)) {
@@ -1023,6 +1051,7 @@ accept:
 u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev){
 	unsigned long long total_packets = 0;
 	flow_info_t flow;
+	u_int8_t smac[ETH_ALEN];
 	enum ip_conntrack_info ctinfo;
 	struct nf_conn *ct = NULL;
 	struct nf_conn_acct *acct;
@@ -1039,6 +1068,9 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if ((ct->mark & NF_MASK_BIT) == NF_MARK_BIT)
 		return NF_ACCEPT;
 
+	if (strncmp(dev->name, "br-lan", 6))
+		return NF_ACCEPT;
+
 	if (CTINFO2DIR(ctinfo) == IP_CT_DIR_REPLY)
 		return NF_ACCEPT;
 
@@ -1046,9 +1078,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if (parse_flow_proto(skb, &flow) < 0)
 		return NF_ACCEPT;
 
+	if (!flow.src)
+		af_get_smac(skb, smac);
 
 	AF_CLIENT_LOCK_R();
-	client = find_af_client_by_ip(flow.src);
+	client = flow.src?find_af_client_by_ip(flow.src):find_af_client(smac);
 	if (!client){
 		AF_CLIENT_UNLOCK_R();
 		return NF_ACCEPT;
@@ -1161,14 +1195,14 @@ static u_int32_t app_filter_by_pass_hook(unsigned int hook,
 static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 
 	},
 	{
 		.hook = app_filter_by_pass_hook,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_PRE_ROUTING,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
@@ -1178,7 +1212,7 @@ static struct nf_hook_ops app_filter_ops[] __read_mostly = {
 	{
 		.hook = app_filter_hook,
 		.owner = THIS_MODULE,
-		.pf = PF_INET,
+		.pf = NFPROTO_INET,
 		.hooknum = NF_INET_FORWARD,
 		.priority = NF_IP_PRI_MANGLE + 1,
 	},
