@@ -1021,7 +1021,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
 
-	if (skb_has_frag_list(skb)) {
+	if (skb_is_nonlinear(skb)) {
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
 			return NF_ACCEPT;
@@ -1040,7 +1040,7 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 
 accept:
-	if (skb_has_frag_list(skb)) {
+	if (skb_is_nonlinear(skb)) {
 		if (flow.l4_data) {
 			kfree(flow.l4_data);
 		}
@@ -1120,7 +1120,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 
 	if (skb->len < 67 || skb->len > 1200)
 		return NF_ACCEPT;
-	if (skb_has_frag_list(skb)) {
+	if (skb_is_nonlinear(skb)) {
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
 		if (!flow.l4_data)
 			return NF_ACCEPT;
@@ -1145,7 +1145,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	}
 
 accept:
-	if (skb_has_frag_list(skb)) {
+	if (skb_is_nonlinear(skb)) {
 		if (flow.l4_data) {
 			kfree(flow.l4_data);
 		}
