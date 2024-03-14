@@ -1068,9 +1068,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if ((ct->mark & NF_MASK_BIT) == NF_MARK_BIT)
 		return NF_ACCEPT;
 
-	if (strncmp(dev->name, "br-lan", 6))
+	if (strncmp(dev->name, "br-lan", 6)) {
+		if ((ct->mark & NF_DROP_MARK) == NF_DROP_MARK)
+			return NF_DROP;
 		return NF_ACCEPT;
-
+	}
 	if (CTINFO2DIR(ctinfo) == IP_CT_DIR_REPLY)
 		return NF_ACCEPT;
 
