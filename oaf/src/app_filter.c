@@ -488,11 +488,11 @@ int dpi_https_proto(flow_info_t *flow)
 		AF_ERROR("flow is NULL\n");
 		return -1;
 	}
-	if (NULL == p || data_len == 0)
+	if (NULL == p || data_len <= 0xb0)
 	{
 		return -1;
 	}
-	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01))
+	if (!(p[0] == 0x16 && p[1] == 0x03 && p[2] == 0x01 && p[5] == 0x01)) // TLS Handshake TLS 1.0 Client Hello
 		return -1;
 
 
