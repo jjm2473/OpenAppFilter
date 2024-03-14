@@ -438,14 +438,16 @@ static void af_clean_feature_list(void)
 	feature_list_write_unlock();
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-// free
+// free by caller
 static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned int len)
 {
 	struct skb_seq_state state;
 	unsigned char *msg_buf = NULL;
 	unsigned int consumed = 0;
-	if (len == 0)
+	if (from <= 0 || from > 1500)
+		return NULL;
+
+	if (len <= 0 || from+len > 1500)
 		return NULL;
 
 	msg_buf = kmalloc(len, GFP_KERNEL);
@@ -469,7 +471,6 @@ static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned 
 	}
 	return msg_buf;
 }
-#endif
 
 int parse_flow_proto(struct sk_buff *skb, flow_info_t *flow)
 {
@@ -1016,11 +1017,12 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 		client->ip = flow.src;
 	AF_CLIENT_UNLOCK_W();
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-	flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
-	if (!flow.l4_data)
-		return NF_ACCEPT;
-#endif
+	if (skb_has_frag_list(skb)) {
+		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+		if (!flow.l4_data)
+			return NF_ACCEPT;
+	}
+
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
 
@@ -1034,11 +1036,11 @@ u_int32_t app_filter_hook_bypass_handle(struct sk_buff *skb, struct net_device *
 	}
 
 accept:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-	if (flow.l4_data) {
-		kfree(flow.l4_data);
+	if (skb_has_frag_list(skb)) {
+		if (flow.l4_data) {
+			kfree(flow.l4_data);
+		}
 	}
-#endif
 	return ret;
 }
 
@@ -1100,11 +1102,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	if(total_packets > MAX_DPI_PKT_NUM)
 		return NF_ACCEPT;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-	flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
-	if (!flow.l4_data)
-		return NF_ACCEPT;
-#endif
+	if (skb_has_frag_list(skb)) {
+		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
+		if (!flow.l4_data)
+			return NF_ACCEPT;
+	}
 	if (0 != dpi_main(skb, &flow))
 		goto accept;
 
@@ -1125,11 +1127,11 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	}
 
 accept:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-	if (flow.l4_data) {
-		kfree(flow.l4_data);
+	if (skb_has_frag_list(skb)) {
+		if (flow.l4_data) {
+			kfree(flow.l4_data);
+		}
 	}
-#endif
 	return ret;
 }
 
