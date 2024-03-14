@@ -980,7 +980,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		return NF_ACCEPT;
 
 	ct = nf_ct_get(skb, &ctinfo);
-	if (ct == NULL || !nf_ct_is_confirmed(ct))
+	if (ct == NULL || CTINFO2DIR(ctinfo) == IP_CT_DIR_REPLY || !nf_ct_is_confirmed(ct))
 		return NF_ACCEPT;
 
 	AF_CLIENT_LOCK_R();
