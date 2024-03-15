@@ -81,6 +81,7 @@ http.setfilehandler(function(meta, chunk, eof)
             os.execute("chmod 666 " .. feature_file);
             os.execute("rm /tmp/appfilter -fr");
             os.execute("uci set appfilter.feature.update=1");
+            os.execute("uci commit appfilter");
             luci.sys.exec("/etc/init.d/appfilter restart");
             um.value = translate("Update the feature file successfully, please refresh the page")
         else
