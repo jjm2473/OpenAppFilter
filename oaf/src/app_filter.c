@@ -781,6 +781,11 @@ int af_match_one(flow_info_t *flow, af_feature_node_t *node)
 	return ret;
 }
 
+int app_filter_redrop(u_int32_t app_id, unsigned char *mac)
+{
+	return af_get_app_status(app_id) && (!is_user_match_enable() || find_af_mac(mac));
+}
+
 int app_filter_match(flow_info_t *flow, unsigned char *mac)
 {
 	af_feature_node_t *n, *node;
@@ -1014,6 +1019,10 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		if (app_id > 1000 && app_id < 9999){
 			if (NF_DROP_BIT == (ct->mark & NF_DROP_BIT))
 				drop = 1;
+			else if (app_filter_redrop(app_id, smac)) {
+				ct->mark |= NF_DROP_BIT;
+				drop = 1;
+			}
 			af_update_client_app_info(smac, app_id, drop);
 
 			if (drop){
