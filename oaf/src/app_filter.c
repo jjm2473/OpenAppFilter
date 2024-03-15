@@ -1117,10 +1117,9 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 	acct = nf_conn_acct_find(ct);
 	if(!acct)
 		return NF_ACCEPT;
-	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets) 
-		+ (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets);
-
-	if (total_packets > MAX_DPI_PKT_NUM) {
+	total_packets = (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_ORIGINAL].packets);
+	if (total_packets > 8 ||
+		total_packets + (unsigned long long)atomic64_read(&acct->counter[IP_CT_DIR_REPLY].packets) > MAX_DPI_PKT_NUM) {
 		ct->mark |= NF_MARK_BIT;
 		return NF_ACCEPT;
 	}
