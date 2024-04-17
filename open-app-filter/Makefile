@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=appfilter
 PKG_VERSION:=5.0.2
-PKG_RELEASE:=6
+PKG_RELEASE:=7
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 include $(INCLUDE_DIR)/package.mk
@@ -11,7 +11,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/appfilter
   SECTION:=Derry Apps
   CATEGORY:=Derry Apps
-  DEPENDS:=+libubox +libubus  +libuci +libpthread +libjson-c +libblobmsg-json
+  DEPENDS:=+libubox +libubus  +libuci +libpthread +libjson-c +libblobmsg-json +kmod-oaf
   TITLE:=App filter userspace module
 endef
 
