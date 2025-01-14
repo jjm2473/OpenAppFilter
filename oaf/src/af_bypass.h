@@ -30,7 +30,7 @@ static inline int bypass_packet(struct sk_buff *skb, const struct net_device *in
 	}
 
 	// for HTTP GET / or HTTPS clien-hello, just a trick
-	if (skb->len < 67 || skb->len > 1200)
+	if (skb->len < 67)
 		return 1;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)

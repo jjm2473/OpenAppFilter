@@ -1124,7 +1124,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 		return NF_ACCEPT;
 	}
 
-	if (skb->len < 67 || skb->len > 1200)
+	if (skb->len < 67)
 		return NF_ACCEPT;
 	if (skb_is_nonlinear(skb)) {
 		flow.l4_data = read_skb(skb, flow.l4_data - skb->data, flow.l4_len);
