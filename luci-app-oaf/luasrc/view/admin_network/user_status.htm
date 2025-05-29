@@ -130,7 +130,7 @@
 						? `<span style="color: green;"><%:Online%></span>` 
 						: "<%:Offline%>";
 					tr.insertCell(-1).innerHTML = `
-						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}')" style="margin-right: 5px;">查看详情</button>
+						<button type="button" class="cbi-button cbi-button-add" onclick="showDetails('${user_list[i].mac}','${nickname || hostname || user_list[i].mac}')" style="margin-right: 5px;">查看详情</button>
 						<button type="button" class="cbi-button cbi-button-add" onclick="showModifyNickname('${user_list[i].mac}')">修改备注</button>
 					`;
 
@@ -223,14 +223,15 @@
 	
 
 
-		function showDetails(mac) {
+		function showDetails(mac, name) {
+			document.getElementById('detailsName').innerText = name;
 			var modal = document.getElementById('detailsModal');
 			modal.style.display = 'flex';
 
 			new XHR().get('<%=url('admin/network/dev_visit_time')%>/' + mac, null,
 				function (x, st) {
 					visit_time_data = st;
-					console.log("visit_time_data = " + visit_time_data);
+					console.log("visit_time_data");
 					display_app_visit_view(visit_time_data);
 				}
 			);
@@ -238,7 +239,7 @@
 			new XHR().get('<%=url('admin/network/dev_visit_list')%>/' + mac, null,
 				function (x, st) {
 					visit_list_data = st;
-					console.log("visit_list_data = " + visit_list_data);
+					console.log("visit_list_data");
 					render_visit_list_table(visit_list_data);
 				}
 			);
@@ -480,7 +481,7 @@
 <div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background-color: white; padding: 20px; border-radius: 5px; text-align: left; width: 750px; height: 500px; display: flex; flex-direction: column; position: relative;">
         <button type="button" onclick="closeModal('detailsModal')" style="position: absolute; top: 10px; right: 10px; background-color: transparent; border: none; font-size: 24px; color: #333; cursor: pointer; width: 30px; height: 30px;">&times;</button>
-        <h4 style="margin-top:2px">设备详情</h4>
+        <h4 style="margin-top:2px">设备详情 - <span id="detailsName"></span></h4>
         
         <!-- Tab List -->
         <ul class="tab-list">
@@ -557,8 +558,8 @@
         <input type="hidden" id="nicknameMac" value="">
         <p style="margin-bottom: 10px;"><span class="field-label">备注:</span> <input type="text" id="nicknameInput" style="padding: 5px; background-color: white;width: 200px"></p>
         <div style="display: flex; justify-content: flex-end;">
-			<button type="button" class="cbi-button cbi-button-add" onclick="closeModal('nicknameModal')">取消</button>
-            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()" style="margin-right: 10px;">确定</button>
+            <button type="button" class="cbi-button cbi-button-add" onclick="submitNicknameChange()">确定</button>
+			<button type="button" class="cbi-button cbi-button-neutral" onclick="closeModal('nicknameModal')">取消</button>
         </div>
     </div>
 </div>
