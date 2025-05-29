@@ -79,10 +79,10 @@ struct json_object *fwx_api_get_system_info(struct json_object *req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
     
-    char lan_ifname[32] = {0};
-    int ret = fwx_uci_get_value(uci_ctx, "fwx.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
+    char lan_ifname[16] = {0};
+    int ret = fwx_uci_get_value(uci_ctx, "fwx.global.lan_ifname", lan_ifname, 16);
     if (ret != 0) {
-        strncpy(lan_ifname, "br-lan", sizeof(lan_ifname) - 1);
+        strcpy(lan_ifname, "br-lan");
     }
     
     char theme_mode_str[8] = {0};
@@ -123,7 +123,7 @@ struct json_object *fwx_api_set_system_info(struct json_object *req_obj) {
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
     
-    if (strlen(lan_ifname) < 2 || strlen(lan_ifname) > 16) {
+    if (strlen(lan_ifname) < 2 || strlen(lan_ifname) > 15) {
         LOG_ERROR("lan_ifname length invalid\n");
         return fwx_gen_api_response_data(API_CODE_ERROR, NULL);
     }
