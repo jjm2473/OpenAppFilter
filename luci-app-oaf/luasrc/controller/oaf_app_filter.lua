@@ -67,7 +67,7 @@ end
 function handle_file_upload()
     local http = require "luci.http"
     local fs = require "nixio.fs"
-    local upload_dir = "/tmp/uploads/"
+    local upload_dir = "/tmp/uploads/oaf/"
     local file_name = "uploaded_file"
     llog("handle_file_upload started");
 
