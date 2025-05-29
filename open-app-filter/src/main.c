@@ -294,7 +294,7 @@ void update_lan_ip(void){
     if (!ctx)
         return;
 	
-    int ret = fwx_uci_get_value(ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
+    int ret = fwx_uci_get_value(ctx, "fwx.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
     if (ret != 0){
         strcpy(lan_ifname, "br-lan");
     }
