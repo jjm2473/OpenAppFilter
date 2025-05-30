@@ -441,7 +441,7 @@
                     else{
                         runStatusElement.textContent = '未运行';
                         runStatusElement.style.color = 'red'; 
-                        runDescElement.textContent = `(oaf驱动未加载,请下载该固件对应内核版本的oaf.ko驱动文件进行安装，并开启自动加载，当前内核版本为${data.data.kernel_version})`;
+                        runDescElement.textContent = `(oaf驱动未加载,请前往高级设置开启"自动加载oaf驱动")`;
                     }
                 }
             );

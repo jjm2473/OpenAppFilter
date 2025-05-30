@@ -7,6 +7,8 @@ if [ x"1" != x"$disable_hnat" ];then
     return
 fi
 
+[ x1 = "x`uci -q get appfilter.global.auto_load_engine`" ] || return
+
 # mt798x                                          
 test -d /sys/kernel/debug/hnat  && {              
     echo 0 >/sys/kernel/debug/hnat/hook_toggle    
