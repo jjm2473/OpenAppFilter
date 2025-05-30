@@ -21,13 +21,13 @@ test -f /etc/config/turboacc && {
     uci -q set "turboacc.config.fastpath_fo_hw"="0"
     uci -q set "turboacc.config.fastpath_fc_ipv6"="0"
     uci -q set "turboacc.config.fastpath"="none"
-    uci -q set "turboacc.config.fullcone"="0"
+#    uci -q set "turboacc.config.fullcone"="0"
     /etc/init.d/turboacc restart &
 }
 
-uci -q set "firewall.@defaults[0].flow_offloading_hw"='0'
-uci -q set "firewall.@defaults[0].flow_offloading"='0'
-uci -q set "firewall.@defaults[0].fullcone"='0'
+uci -q delete "firewall.@defaults[0].flow_offloading_hw"
+uci -q delete "firewall.@defaults[0].flow_offloading"
+# uci -q set "firewall.@defaults[0].fullcone"='0'
 
 fw3 reload &
 
