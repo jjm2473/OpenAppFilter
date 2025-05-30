@@ -229,6 +229,9 @@ msgstr "关闭软/硬件加速"
 msgid "Software and hardware acceleration, NAT offload and other modules may affect filtering or statistics functions. This interface only attempts to turn them off, but may not be completely successful. Please check the status in the firewall or network acceleration menu. Re-enabling acceleration requires a device restart to take effect."
 msgstr "软硬件加速、NAT offload等模块会影响过滤或统计功能，在该界面只是尝试关闭，不一定能够完全成功，请在防火墙或者网络加速菜单中查看关闭状态，重新开启加速需要重启设备生效。"
 
+msgid "It takes effect immediately after it is turned on, and takes effect only after the system is restarted after it is turned off."
+msgstr "开启后立即生效，关闭后重启系统才生效"
+
 msgid "Auto-load oaf driver"
 msgstr "自动加载oaf驱动"
 
@@ -426,6 +429,9 @@ msgstr "当前时间不在时间范围内"
 
 msgid "Will start in"
 msgstr "分钟后开启"
+
+msgid "oaf driver not loaded, please enable auto-loading on the advanced settings page."
+msgstr "oaf驱动未加载,请前往高级设置开启自动加载"
 
 msgid "oaf driver not loaded, please download the oaf.ko driver file corresponding to the kernel version of this firmware for installation, and enable auto-loading. Current kernel version is"
 msgstr "oaf驱动未加载,请下载该固件对应内核版本的oaf.ko驱动文件进行安装，并开启自动加载，当前内核版本为"
