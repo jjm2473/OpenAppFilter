@@ -31,6 +31,10 @@
 #include <linux/seq_file.h>
 #include <linux/proc_fs.h>
 #include <linux/ctype.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
+#include <net/netfilter/ipv4/nf_reject.h>
+#include <net/netfilter/ipv6/nf_reject.h>
+#endif
 #include "fwx.h"
 #include "fwx_utils.h"
 #include "fwx_log.h"
@@ -174,14 +178,6 @@ static af_url_ac_t g_url_ac = {
 	.ready = 0,
 };
 static int g_url_ac_dirty = 1;
-
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
-extern void nf_send_reset(struct net *net, struct sock *sk, struct sk_buff *oldskb, int hook);
-#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-extern void nf_send_reset(struct net *net,  struct sk_buff *oldskb, int hook);
-#else
-extern void nf_send_reset(sk_buff *oldskb, int hook);
-#endif
 
 char *ipv6_to_str(const struct in6_addr *addr, char *str)
 {
@@ -2143,28 +2139,35 @@ static int af_should_send_tcp_rst(struct sk_buff *skb, flow_info_t *flow)
 	if (!g_tcp_rst || !skb || !flow || flow->l4_protocol != IPPROTO_TCP)
 		return 0;
 
-	if (skb->protocol != htons(ETH_P_IP))
-		return 0;
-
 	return 1;
 }
 
-static void af_send_tcp_reset(struct sk_buff *skb)
+static void af_send_tcp_reset(struct sk_buff *skb, flow_info_t *flow)
 {
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
-	nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
-#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
-
-
-#else
-	nf_send_reset(skb, NF_INET_PRE_ROUTING);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
+	if (flow->src6) {
+	#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
+		nf_send_reset6(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
+	#else
+		nf_send_reset6(&init_net, skb, NF_INET_PRE_ROUTING);
+	#endif
+	} else {
+	#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,197)
+		nf_send_reset(&init_net, skb->sk, skb, NF_INET_PRE_ROUTING);
+	#elif LINUX_VERSION_CODE > KERNEL_VERSION(4,4,1)
+		nf_send_reset(&init_net, skb, NF_INET_PRE_ROUTING);
+	#else
+		nf_send_reset(skb, NF_INET_PRE_ROUTING);
+	#endif
+	}
 #endif
+
 }
 
 void send_reset_packet(struct sk_buff *skb, flow_info_t *flow)
 {
 	if (af_should_send_tcp_rst(skb, flow))
-		af_send_tcp_reset(skb);
+		af_send_tcp_reset(skb, flow);
 }
 
 
@@ -2514,7 +2517,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 			AF_LMT_INFO("##Drop App filter rule, appid = %d, mac = " MAC_FMT "\n", 
 					flow.app_id, MAC_ARRAY(client->mac));
 			if (af_should_send_tcp_rst(skb, &flow))
-				af_send_tcp_reset(skb);
+				af_send_tcp_reset(skb, &flow);
 			ret = NF_DROP;
 		}
 	}
@@ -2526,7 +2529,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 			AF_LMT_WARN("##Drop MAC filter rule, mac = " MAC_FMT "\n", 
 					MAC_ARRAY(client->mac));
 			if (af_should_send_tcp_rst(skb, &flow))
-				af_send_tcp_reset(skb);
+				af_send_tcp_reset(skb, &flow);
 			ret = NF_DROP;
 		}
 	}
