@@ -2425,6 +2425,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 		if (app_id > 0 && app_id < 1000){
 			if (g_appfilter_enable && ct_action) {
 				AF_LMT_DEBUG("ct drop appid = %d\n", app_id);
+				send_reset_packet(skb, &flow);
 				return NF_DROP;
 			}
 		}
@@ -2445,6 +2446,7 @@ u_int32_t fwx_hook_gateway_handle(struct sk_buff *skb, struct net_device *dev)
 			}
 			if (g_appfilter_enable && ct_action) {
 				AF_LMT_DEBUG("drop appid = %d, ct_action = %d\n", app_id, ct_action);
+				send_reset_packet(skb, &flow);
 				return NF_DROP;
 			}
 		}
