@@ -1247,6 +1247,9 @@ static unsigned char *read_skb(struct sk_buff *skb, unsigned int from, unsigned 
 	unsigned char *msg_buf = NULL;
 	unsigned int consumed = 0;
 
+	if (len <= 0)
+ 		return NULL;
+
 	msg_buf = kmalloc(len, GFP_KERNEL);
 	if (!msg_buf)
 		return NULL;
