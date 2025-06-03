@@ -1446,6 +1446,7 @@ u_int32_t app_filter_hook_gateway_handle(struct sk_buff *skb, struct net_device 
 			}
 			if (g_oaf_filter_enable && ct_action) {
 				AF_LMT_DEBUG("drop appid = %d, ct_action = %d\n", app_id, ct_action);
+				af_send_reset(&flow, skb);
 				return NF_DROP;
 			}
 			else{
