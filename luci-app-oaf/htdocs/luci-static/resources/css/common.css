@@ -1,11 +1,4 @@
 
-body {
-    font-family: Arial, sans-serif;
-}
-h1, h2 {
-    color: #333;
-}
-
 
 
 .button-check {
@@ -21,20 +14,6 @@ h1, h2 {
     display: flex;
     justify-content: right; 
     margin-top: 5px; 
-}
-
-.submit-button {
-    margin-top: 30px;
-    width: 150px; 
-    height: 30px; 
-    background-color: #2885e8;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.submit-button:hover {
-    background-color: #0f77e6;
 }
 
 .switch {
