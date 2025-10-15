@@ -520,7 +520,7 @@
                     else{
                         runStatusElement.textContent = '<%:Not Running%>';
                         runStatusElement.style.color = 'red'; 
-                        runDescElement.textContent = `(<%:oaf driver not loaded, please download the oaf.ko driver file corresponding to the kernel version of this firmware for installation, and enable auto-loading. Current kernel version is%> ${data.data.kernel_version})`;
+                        runDescElement.textContent = `(<%:oaf driver not loaded, please enable auto-loading on the advanced settings page.%>)`;
                     }
                 }
             );
