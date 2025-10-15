@@ -366,7 +366,7 @@ void af_hnat_init(void){
     }
     if (g_hnat_init == 0){
         LOG_DEBUG("disable hnat...\n");
-        system("/usr/bin/hnat.sh");
+        system("/usr/libexec/oaf/hnat.sh");
         g_hnat_init = 1;
     }
 }
@@ -429,7 +429,7 @@ int af_load_feature_to_kernel(void){
 }
 
 int reload_feature(void){
-    system("gen_class.sh /tmp/feature.cfg");
+    system("/usr/libexec/oaf/gen_class.sh /tmp/feature.cfg");
     init_app_name_table();
     init_app_class_name_table();
     if (af_load_feature_to_kernel() < 0){
