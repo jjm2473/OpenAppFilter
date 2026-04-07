@@ -440,6 +440,7 @@ void load_feature_buf_from_file(char **config_buf)
 	size = inode->i_size;
 	if (size == 0)
 	{
+		filp_close(fp, NULL);
 		return;
 	}
 	*config_buf = (char *)kzalloc(sizeof(char) * size, GFP_ATOMIC);
@@ -499,12 +500,13 @@ int load_feature_config(void)
 	if (p != begin)
 	{
 		if (p - begin < MIN_FEATURE_LINE_LEN || p - begin > MAX_FEATURE_LINE_LEN)
-			return 0;
+			goto out;
 		memset(line, 0x0, sizeof(line));
 		strncpy(line, begin, p - begin);
 		af_init_feature(line);
 		begin = p + 1;
 	}
+out:
 	if (feature_buf)
 		kfree(feature_buf);
 	return 0;
@@ -1837,4 +1839,3 @@ static void app_filter_fini(void)
 
 module_init(app_filter_init);
 module_exit(app_filter_fini);
-

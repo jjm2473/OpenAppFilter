@@ -300,7 +300,10 @@ int __af_visit_info_report(af_client_info_t *node)
 	cJSON_AddItemToObject(root_obj, "visit_info", visit_info_array);
 	out = cJSON_Print(root_obj);
 	if (!out)
+	{
+		cJSON_Delete(root_obj);
 		return 0;
+	}
 	cJSON_Minify(out);
 	if (count > 0 || node->report_count == 0)
 	{
