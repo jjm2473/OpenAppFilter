@@ -12,6 +12,8 @@ function index()
 	entry({"admin", "services", "oaf", "api", "system", "set_tcp_rst"}, call("set_tcp_rst"), nil).leaf = true
 	entry({"admin", "services", "oaf", "api", "system", "get_advanced_settings"}, call("get_advanced_settings"), nil).leaf = true
 	entry({"admin", "services", "oaf", "api", "system", "set_advanced_settings"}, call("set_advanced_settings"), nil).leaf = true
+	entry({"admin", "services", "oaf", "api", "system", "disable_oaf"}, call("disable_oaf"), nil).leaf = true
+	entry({"admin", "services", "oaf", "api", "system", "enable_oaf"}, call("enable_oaf"), nil).leaf = true
 end
 
 local function ubus_call(api, payload)
@@ -124,4 +126,22 @@ function set_advanced_settings()
 
 	http.prepare_content("application/json")
 	http.write_json(resp)
+end
+
+function disable_oaf()
+	os.execute("uci delete fwx.global.enable && uci commit fwx")
+	os.execute("/etc/init.d/appfilter stop")
+	os.execute("rmmod oaf")
+
+
+	http.prepare_content("application/json")
+	http.write_json({code = 2000, message = "OAF disabled successfully"})
+end
+
+function enable_oaf()
+	os.execute("uci set fwx.global.enable=1 && uci commit fwx")
+	os.execute("/etc/init.d/appfilter start")
+
+	http.prepare_content("application/json")
+	http.write_json({code = 2000, message = "OAF enabled successfully"})
 end
