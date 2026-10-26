@@ -14,7 +14,7 @@ define KernelPackage/oaf
   SUBMENU:=Netfilter Extensions
   TITLE:=OAF netfilter module
   FILES:=$(PKG_BUILD_DIR)/oaf.ko 
-  DEPENDS:=+kmod-nf-conntrack +kmod-nf-reject
+  DEPENDS:=+kmod-nf-conntrack +kmod-nf-reject +kmod-nf-reject6
   KCONFIG:=
 endef
 
