@@ -2,6 +2,9 @@
 local nfs = require "nixio.fs"
 local has_app_filter = nfs.access("/etc/config/appfilter")
 local has_access_control = nfs.access("/etc/config/macfilter")
+local uci = require "uci"
+local uci_cursor = uci.cursor()
+local global_enabled = uci_cursor:get("fwx", "global", "enable") == "1"
 %>
 <%+header%>
 <link rel="stylesheet" href="<%=resource%>/oaf/css/common.css">
@@ -17,6 +20,20 @@ local has_access_control = nfs.access("/etc/config/macfilter")
             <span class="settings-chevron" aria-hidden="true"></span>
         </button>
         <div class="settings-panel-body" id="basic-settings-panel">
+        <% if not global_enabled then %>
+            <div class="form-row">
+                <label class="form-label"><%:OAF is disabled%></label>
+                <div class="settings-field">
+                    <button type="button" class="btn btn-secondary" id="enable-oaf"><%:Enable OAF%></button>
+                </div>
+            </div>
+        <% else %>
+            <div class="form-row">
+                <label class="form-label"><%:OAF is enabled%></label>
+                <div class="settings-field">
+                    <button type="button" class="btn btn-secondary" id="disable-oaf"><%:Disable OAF%></button>
+                </div>
+            </div>
             <div class="form-row">
                 <label class="form-label" for="work-mode"><%:Work Mode%></label>
                 <select id="work-mode">
@@ -69,9 +86,11 @@ local has_access_control = nfs.access("/etc/config/macfilter")
                 </label>
             </div>
             <% end %>
+        <% end %>
         </div>
     </section>
 
+<% if global_enabled then %>
     <section class="settings-panel">
         <button type="button" class="settings-panel-header" aria-expanded="true" aria-controls="audit-settings-panel">
             <span><%:Internet Audit%></span>
@@ -185,6 +204,7 @@ local has_access_control = nfs.access("/etc/config/macfilter")
         <button class="btn" type="button" id="settings-save" disabled><%:Save%></button>
     </div>
     <div class="status-tip" id="settings-tip"></div>
+<% end %>
 </div>
 
 <style>
@@ -192,6 +212,31 @@ local has_access_control = nfs.access("/etc/config/macfilter")
 @media(max-width:600px){.settings-page{padding:0 4px}.settings-panel-header{padding:11px 12px}.settings-panel-body{padding:13px 12px}.settings-panel-body .form-row{display:block}.settings-panel-body .form-label{display:block;width:auto;margin-bottom:7px}.work-mode-warning{margin-left:0}.settings-field>input,.settings-field>select,.settings-panel-body>.form-row>select{width:100%}.size-field input{width:100%!important;min-width:0}.settings-actions{padding-right:2px}}
 </style>
 
+<script type="text/javascript">//<![CDATA[
+(function() {
+    var api = {
+        disableOaf: '<%=url("admin/services/oaf/api/system/disable_oaf")%>',
+        enableOaf: '<%=url("admin/services/oaf/api/system/enable_oaf")%>',
+    };
+    var toggleOaf = function(enable) {
+        var url = enable ? api.enableOaf : api.disableOaf;
+        $.ajax({url:url, method:'POST'}).always(function() {
+            setTimeout(function() {
+                location.reload();
+            }, 500);
+        });
+    };
+    $('#disable-oaf').on('click', function() {
+        toggleOaf(false);
+    });
+    $('#enable-oaf').on('click', function() {
+        toggleOaf(true);
+    });
+})();
+//]]>
+</script>
+
+<% if global_enabled then %>
 <script type="text/javascript">//<![CDATA[
 (function() {
     var text = {
@@ -458,5 +503,6 @@ local has_access_control = nfs.access("/etc/config/macfilter")
     $(refreshAll);
 })();
 //]]></script>
+<% end %>
 
 <%+footer%>

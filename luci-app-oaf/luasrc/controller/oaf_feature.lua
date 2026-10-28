@@ -1,6 +1,12 @@
 module("luci.controller.oaf_feature", package.seeall)
 
 function index()
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
+
 	entry({"admin", "services", "oaf", "feature"},
 		template("oaf/feature"),
 		_("Feature Library"), 80).dependent = true
