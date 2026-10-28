@@ -195,20 +195,6 @@ int check_time_valid(char *t)
 }
 
 
-int config_get_appfilter_enable(void)
-{
-    int enable = 0;
-    struct uci_context *ctx = uci_alloc_context();
-    if (!ctx)
-        return -1;
-	enable = fwx_uci_get_int_value(ctx, "appfilter.global.enable");
-    if (enable < 0)
-        enable = 0;
-    
-	uci_free_context(ctx);
-    return enable;
-}
-
 int config_get_lan_ip(char *lan_ip, int len)
 {
     int ret = 0;
