@@ -535,13 +535,13 @@ int __af_visit_info_report(af_client_info_t *node)
 
 	cJSON_AddItemToObject(root_obj, "visit_info", visit_info_array);
 	out = cJSON_Print(root_obj);
+	cJSON_Delete(root_obj);
 	if (!out)
 		return 0;
 	cJSON_Minify(out);
 
 	node->report_count++;
 	af_send_msg_to_user(out, strlen(out));
-	cJSON_Delete(root_obj);
 
 	memset(&node->period_flow, 0x0, sizeof(node->period_flow));
 

@@ -553,6 +553,7 @@ int init_af_client_procfs(void)
 	if (!pde)
 	{
 	  AF_ERROR("nf_client visiting info proc file created error\n");
+	  remove_proc_entry(AF_CLIENT_PROC_STR, net->proc_net);
 	  return -1;
 	}
 	
@@ -560,6 +561,8 @@ int init_af_client_procfs(void)
 	if (!pde)
 	{
 		AF_ERROR("nf_client visit list proc file created error\n");
+		remove_proc_entry(AF_VISIT_INFO, net->proc_net);
+		remove_proc_entry(AF_CLIENT_PROC_STR, net->proc_net);
 		return -1;
 	}
     return 0;
