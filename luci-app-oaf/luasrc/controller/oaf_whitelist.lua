@@ -38,6 +38,12 @@ function index()
 		return
 	end
 
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
+
 	entry({"admin", "services", "oaf", "whitelist"}, cbi("oaf/whitelist", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Whitelist"), 50).leaf = true
 	entry({"admin", "services", "oaf", "api", "record_whitelist", "get_record_whitelist"}, call("get_record_whitelist"), nil).leaf = true
 	entry({"admin", "services", "oaf", "api", "record_whitelist", "get_record_whitelist_all"}, call("get_record_whitelist_all"), nil).leaf = true

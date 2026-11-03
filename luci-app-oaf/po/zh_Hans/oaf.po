@@ -1959,3 +1959,15 @@ msgstr "无效的Key，请通过官网获取正确的Key，并开通高级版特
 
 msgid "No data"
 msgstr "暂无数据"
+
+msgid "OAF is disabled"
+msgstr "OAF 未启用"
+
+msgid "OAF is enabled"
+msgstr "OAF 已启用"
+
+msgid "Enable OAF"
+msgstr "启用 OAF"
+
+msgid "Disable OAF"
+msgstr "禁用 OAF"

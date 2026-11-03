@@ -2,6 +2,12 @@ module("luci.controller.oaf_user", package.seeall)
 local utl = require "luci.util"
 
 function index()
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
+
 	local page
 	entry({"admin", "services", "oaf", "users"}, alias("admin", "services", "oaf", "users", "list"), _("User List"), 20).dependent = true
 	entry({"admin", "services", "oaf", "users", "list"}, cbi("oaf/user_list", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}),

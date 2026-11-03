@@ -19,6 +19,12 @@ local function write_empty_list(page, page_size)
 end
 
 function index()
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
+
     entry({"admin", "services", "oaf", "app_record"}, template("oaf/app_record"), _("App Record"), 70).leaf = true
     entry({"admin", "services", "oaf", "api", "app_record", "get_active_app_records"}, call("get_active_app_records")).leaf = true
     entry({"admin", "services", "oaf", "api", "app_record", "get_app_history_records"}, call("get_app_history_records")).leaf = true

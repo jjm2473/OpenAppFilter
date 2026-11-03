@@ -1,6 +1,12 @@
 module("luci.controller.oaf_dashboard", package.seeall)
 
 function index()
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
+
 	entry({"admin", "services", "oaf", "dashboard"}, cbi("oaf/dashboard", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}),
 	 _("Dashboard"), 10).leaf = true
 	

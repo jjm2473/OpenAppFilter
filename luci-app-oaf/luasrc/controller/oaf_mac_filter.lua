@@ -6,6 +6,11 @@ function index()
 	if not fs.access("/etc/config/macfilter") then
 		return
 	end
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
 
 	entry({"admin", "services", "oaf", "mac_filter"}, alias("admin", "services", "oaf", "mac_filter", "rules"), _("Access Control"), 40).dependent = true
 	entry({"admin", "services", "oaf", "mac_filter", "rules"}, cbi("oaf/mac_filter/rules", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Filter Rules"), 10).leaf=true

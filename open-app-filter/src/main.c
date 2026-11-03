@@ -377,7 +377,7 @@ void fwx_timeout_handler(struct uloop_timeout *t)
         collect_interface_traffic_rate();
     }
 
-    if (fwx_nl_fd.fd < 0){
+    if (fwx_nl_fd.fd < 0 && access("/proc/sys/fwx", F_OK) == 0){
         fwx_nl_fd.fd = fwx_netlink_init();
         if (fwx_nl_fd.fd > 0){
             uloop_fd_add(&fwx_nl_fd, ULOOP_READ);

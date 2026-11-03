@@ -6,6 +6,12 @@ function index()
 	if not fs.access("/etc/config/appfilter") then
 		return
 	end
+	local uci = require "uci"
+	local uci_cursor = uci.cursor()
+	if uci_cursor:get("fwx", "global", "enable") ~= "1" then
+		return
+	end
+
 	entry({"admin", "services", "oaf", "app_filter"}, alias("admin", "services", "oaf", "app_filter", "rules"), _("App Filter"), 30).dependent = true
 	entry({"admin", "services", "oaf", "app_filter", "rules"}, cbi("oaf/app_filter/rules", {hideapplybtn=true, hidesavebtn=true, hideresetbtn=true}), _("Filter Rules"), 10).leaf=true
 	entry({"admin", "services", "oaf", "api", "app_filter", "class_list"}, call("get_class_list"), nil).leaf = true
