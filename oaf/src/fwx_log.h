@@ -13,7 +13,7 @@ extern unsigned int fwx_lan_ip;
 extern unsigned int fwx_lan_mask;
 extern int g_feature_init;
 extern int g_user_mode;
-extern char g_lan_ifname[64];
+extern char g_lan_ifname[16];
 extern int g_tcp_rst;
 extern int g_feature_count;
 

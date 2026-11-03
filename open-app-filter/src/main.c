@@ -287,14 +287,14 @@ void update_lan_ip(void){
     char cmd_buf[128] = {0};
     u_int32_t lan_ip = 0;
 	u_int32_t lan_mask = 0;
-    char lan_ifname[32] = {0};
+    char lan_ifname[16] = {0};
     char ip_cmd_buf[128] = {0};
     char mask_cmd_buf[128] = {0};
     struct uci_context *ctx = uci_alloc_context();
     if (!ctx)
         return;
 	
-    int ret = fwx_uci_get_value(ctx, "appfilter.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
+    int ret = fwx_uci_get_value(ctx, "fwx.global.lan_ifname", lan_ifname, 16);
     if (ret != 0){
         strcpy(lan_ifname, "br-lan");
     }
@@ -402,8 +402,8 @@ void fwx_timeout_handler(struct uloop_timeout *t)
 void init_system_config_to_proc(void) {
     struct uci_context *ctx = uci_alloc_context();
     if (ctx) {
-        char lan_ifname[32] = {0};
-        int ret = fwx_uci_get_value(ctx, "fwx.global.lan_ifname", lan_ifname, sizeof(lan_ifname) - 1);
+        char lan_ifname[16] = {0};
+        int ret = fwx_uci_get_value(ctx, "fwx.global.lan_ifname", lan_ifname, 16);
         if (ret != 0) {
             strcpy(lan_ifname, "br-lan");
         }

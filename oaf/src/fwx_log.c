@@ -22,7 +22,7 @@ int g_user_mode = 0;
 int af_work_mode = AF_MODE_GATEWAY;
 unsigned int fwx_lan_ip = 0;
 unsigned int fwx_lan_mask = 0;
-char g_lan_ifname[64] = "br-lan";
+char g_lan_ifname[16] = "br-lan";
 int g_tcp_rst = 1;
 int g_feature_init = 0;
 char g_fwx_version[64] = FWX_VERSION;
@@ -115,7 +115,7 @@ static struct ctl_table fwx_table[] = {
 	{
 		.procname	= "lan_ifname",
 		.data		= g_lan_ifname,
-		.maxlen 	= 64,
+		.maxlen 	= 16,
 		.mode		= 0666,
 		.proc_handler = proc_dostring,
 	},
