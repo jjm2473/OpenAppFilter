@@ -45,7 +45,7 @@ endef
 
 
 define Package/appfilter/install
-	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/init.d $(1)/usr/libexec/oaf
 	$(INSTALL_DIR) $(1)/etc/fwxd
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d/
@@ -53,8 +53,8 @@ define Package/appfilter/install
 	$(INSTALL_DATA) ./files/custom_feature.cfg $(1)/etc/fwxd/custom_feature.cfg
 	$(INSTALL_BIN) ./files/appfilter.init $(1)/etc/init.d/appfilter
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/oafd $(1)/usr/bin
-	$(INSTALL_BIN) ./files/rule_manager.lua $(1)/usr/bin/rule_manager
-	$(INSTALL_BIN) ./files/hnat.sh $(1)/usr/bin/hnat.sh
+	$(INSTALL_BIN) ./files/rule_manager.lua $(1)/usr/libexec/oaf/rule_manager
+	$(INSTALL_BIN) ./files/hnat.sh $(1)/usr/libexec/oaf
 	$(INSTALL_DATA) ./files/oaf_version $(1)/etc/oaf_version
 	$(INSTALL_DATA) ./files/luci-app-oaf.json $(1)/usr/share/rpcd/acl.d/
 endef

@@ -67,15 +67,9 @@ end
 function handle_file_upload()
     local http = require "luci.http"
     local fs = require "nixio.fs"
-    local upload_dir = "/tmp/uploads/"
+    local upload_dir = "/tmp/uploads/oaf/"
     local file_name = "uploaded_file"
     llog("handle_file_upload started");
-
-    if not fs.access(upload_dir) then
-        fs.mkdir(upload_dir)
-    end
-
-    llog("Upload directory checked/created");
 
     local file_path = upload_dir .. file_name
     local fp
@@ -87,6 +81,9 @@ function handle_file_upload()
             llog("File upload chunk size: " .. (chunk and #chunk or 0))
 
             if not fp then
+                fs.mkdirr(upload_dir)
+                llog("Upload directory checked/created");
+
                 fp = io.open(file_path, "w")
                 llog("File opened for writing: " .. file_path)
             end

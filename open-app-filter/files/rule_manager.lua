@@ -10,7 +10,7 @@ if not has_jsonc then
 end
 
 local CHECK_INTERVAL = 10  
-local LOG_FILE = "/tmp/log/rule_manager.log" 
+local LOG_FILE = "/tmp/log/oaf/rule_manager.log" 
 local SINGLE_MAC_FILTER_RULE_ID = 101  
 local BLACKLIST_MAC_FILTER_RULE_ID = 102
 local USER_PARENTAL_CONTROL_STATUS_FILE = "/tmp/fwx_cache/user_parental_control_status"

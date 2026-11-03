@@ -257,7 +257,7 @@ struct json_object *fwx_api_set_advanced_settings(struct json_object *req_obj)
     uci_free_context(uci_ctx);
 
     if (disable_hnat == 1)
-        system("/usr/bin/hnat.sh >/dev/null 2>&1");
+        system("/usr/libexec/oaf/hnat.sh >/dev/null 2>&1");
 
     LOG_DEBUG("Set advanced settings: disable_hnat=%d\n", disable_hnat);
     return fwx_gen_api_response_data(API_CODE_SUCCESS, NULL);
