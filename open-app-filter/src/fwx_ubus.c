@@ -5872,7 +5872,7 @@ static struct json_object *get_dashboard_network_status(void) {
 
     int work_mode = 1; 
     if (uci_ctx) {
-        work_mode = fwx_uci_get_int_value(uci_ctx, "appfilter.global.work_mode");
+        work_mode = fwx_uci_get_int_value(uci_ctx, "fwx.network.work_mode");
         if (work_mode < 0) work_mode = 1;
     }
     json_object_object_add(network_status, "work_mode", json_object_new_int(work_mode));

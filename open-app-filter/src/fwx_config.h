@@ -28,7 +28,6 @@ int app_icon_exists_by_id(int id);
 int appfilter_config_alloc(void);
 
 int appfilter_config_free(void);
-int config_get_appfilter_enable(void);
 int config_get_lan_ip(char *lan_ip, int len);
 int config_get_lan_mask(char *lan_mask, int len);
 #endif
